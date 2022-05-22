@@ -13,7 +13,14 @@ console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 async function run(){
   try{
-
+    await client.connect();
+    const toolCollection = client.db('ToolManagement').collection('tools');
+    app.get('/tools', async(req,res)=>{
+      const qurey = {}
+      const cursor =  toolCollection.find(qurey)
+      const tools = await cursor.toArray()
+      res.send(tools)
+    })
   }
   finally{
 
