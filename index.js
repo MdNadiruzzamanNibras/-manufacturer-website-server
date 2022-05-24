@@ -7,6 +7,22 @@ const port = process.env.PORT || 5000
 
 app.use(cors())
 app.use(express.json())
+function verifyJwt (req, res, next){
+  const authHeader = req.headers.authorization
+  if (!authHeader) {
+      return res.status(401).send({ message: 'Unauthorized access' })
+  }
+  const token = authHeader.split(' ')[1]
+  console.log('insidejwt', authHeader);
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+      if (err) {
+          return res.status(403).send({ message: 'Forbidden access' })
+      }
+      console.log('decoded', decoded);
+      req.decoded = decoded
+  next()
+})
+}
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USSER}:${process.env.DB_PASS}@cluster0.qpwac.mongodb.net/?retryWrites=true&w=majority`;
