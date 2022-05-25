@@ -33,6 +33,19 @@ async function run(){
     const toolCollection = client.db('ToolManagement').collection('tools');
     const ordersCollection = client.db('ToolManagement').collection('orders');
     const makeAdminCollection = client.db('ToolManagement').collection('makeAdmins');
+    const reviewCollection = client.db('ToolManagement').collection('reviews');
+
+    const verifyAdmin =async (req,res,next)=>{
+      const requested = req.decoded.email
+      const requestedAccount = await userCollection.findOne({email:requested})
+     
+      if(requestedAccount.role==="admin"){
+        next()
+      }
+      else {
+        res.status(403).send({ message: 'forbidden' });
+      }
+    }
     app.get('/tools', async(req,res)=>{
       const qurey = {}
       const cursor =  toolCollection.find(qurey)
@@ -47,13 +60,33 @@ async function run(){
   })
   app.delete('/tools/:id', async(req,res)=>{
     const id = req.params.id
-    console.log(id);
     const query = {_id: ObjectId(id)}
     const result = await toolCollection.deleteOne(query)
     res.send(result)
 
-})
-  app.put('/user/:email', async (req, res) => {
+}) 
+  app.get('/user', async(req,res)=>{
+    const users = await makeAdminCollection.find().toArray()
+    res.send(users)
+  })
+  app.get('/admin/:email', async (req, res) => {
+    const email = req.params.email;
+    const user = await makeAdminCollection.findOne({ email: email });
+    console.log(user.role);
+    const isAdmin = user.role === 'admin';
+    
+    res.send({ admin: isAdmin })
+  })
+  app.put('/user/admin/:email', verifyJwt, verifyAdmin, async (req, res) => {
+    const email = req.params.email;
+    const filter = { email: email };
+    const updateDoc = {
+      $set: { role: 'admin' },
+    };
+    const result = await makeAdminCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  })
+  app.put('/user/:email',verifyJwt, async (req, res) => {
     const email = req.params.email
     const user = req.body
     const filter = { email: email }
@@ -68,14 +101,16 @@ async function run(){
   })
    app.get('/order',verifyJwt, async(req,res)=>{
      const email =  req.query.email
-     console.log(email);
      const decodedEmail = req.decoded.email
-     console.log(decodedEmail);
     if(email ===decodedEmail)
     { const qurey = {BuyerEmail  : email}
      const order = await ordersCollection.find(qurey).toArray()
      res.send(order)}
 
+   })
+   app.get('/order', verifyJwt, async(req,res)=>{
+     const allOrder = await ordersCollection.find().toArray()
+     res.send(allOrder)
    })
    app.post('/order', async(req,res)=>{
      const order= req.body
@@ -84,12 +119,17 @@ async function run(){
    })
    app.delete('/order/:id', async(req,res)=>{
     const id = req.params.id
-    console.log(id);
     const query = {_id: ObjectId(id)}
     const result = await ordersCollection.deleteOne(query)
-    res.send(result)
+    res.send(result) 
+ })
+ app.post('/review', async(req,res)=>{
+  const review= req.body
+  const result = await reviewCollection.insertOne(review)
+  res.send(result)
+}) 
 
-})
+
   }
   finally{
 
