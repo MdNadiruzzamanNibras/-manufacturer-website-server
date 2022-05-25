@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const app = express()
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000
 
 app.use(cors())
@@ -13,18 +14,17 @@ function verifyJwt (req, res, next){
       return res.status(401).send({ message: 'Unauthorized access' })
   }
   const token = authHeader.split(' ')[1]
-  console.log('insidejwt', authHeader);
   jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
       if (err) {
           return res.status(403).send({ message: 'Forbidden access' })
       }
-      console.log('decoded', decoded);
+     
       req.decoded = decoded
   next()
 })
 }
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = `mongodb+srv://${process.env.DB_USSER}:${process.env.DB_PASS}@cluster0.qpwac.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 async function run(){
@@ -45,6 +45,14 @@ async function run(){
       const tool = await toolCollection.findOne(qurey)
       res.send(tool)
   })
+  app.delete('/tools/:id', async(req,res)=>{
+    const id = req.params.id
+    console.log(id);
+    const query = {_id: ObjectId(id)}
+    const result = await toolCollection.deleteOne(query)
+    res.send(result)
+
+})
   app.put('/user/:email', async (req, res) => {
     const email = req.params.email
     const user = req.body
@@ -58,11 +66,15 @@ async function run(){
     res.send({result, token})
 
   })
-   app.get('/order', async(req,res)=>{
-     const email = req.body.BuyerEmail
-     const qurey = {email : email}
+   app.get('/order',verifyJwt, async(req,res)=>{
+     const email =  req.query.email
+     console.log(email);
+     const decodedEmail = req.decoded.email
+     console.log(decodedEmail);
+    if(email ===decodedEmail)
+    { const qurey = {BuyerEmail  : email}
      const order = await ordersCollection.find(qurey).toArray()
-     res.send(order)
+     res.send(order)}
 
    })
    app.post('/order', async(req,res)=>{
@@ -70,6 +82,14 @@ async function run(){
      const result = await ordersCollection.insertOne(order)
      res.send(result)
    })
+   app.delete('/order/:id', async(req,res)=>{
+    const id = req.params.id
+    console.log(id);
+    const query = {_id: ObjectId(id)}
+    const result = await ordersCollection.deleteOne(query)
+    res.send(result)
+
+})
   }
   finally{
 
