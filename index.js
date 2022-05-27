@@ -186,6 +186,12 @@ app.put('/user/:email', async (req, res) => {
   const result = await reviewCollection.insertOne(review)
   res.send(result)
 }) 
+  app.get('/myProfile', async(req,res)=>{
+    const email = req.query.email 
+    const query ={ email :email}
+    const result = await profileCollection.findOne(query)
+    res.send(result)
+  })
   
   app.put('/profile/:email', async(req,res)=>{
     const email = req.params.email 
@@ -197,7 +203,8 @@ app.put('/user/:email', async (req, res) => {
         name: updateUser.name,
         email: updateUser.email,
         phone: updateUser.phone,
-        address: updateUser.address
+        address: updateUser.address,
+        linkedin: updateUser.linkedin
       }
     }
     const result = await profileCollection.updateOne(filter, updatedDoc, options)
