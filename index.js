@@ -1,9 +1,12 @@
-const express = require('express')
+const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const app = express()
+const stripe = require('stripe')(process.env.Stripe_key)
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const port = process.env.PORT || 5000
 
 app.use(cors())
@@ -34,10 +37,11 @@ async function run(){
     const ordersCollection = client.db('ToolManagement').collection('orders');
     const makeAdminCollection = client.db('ToolManagement').collection('makeAdmins');
     const reviewCollection = client.db('ToolManagement').collection('reviews');
+    const paymentCollection = client.db('ToolManagement').collection('payments');
 
     const verifyAdmin =async (req,res,next)=>{
       const requested = req.decoded.email
-      const requestedAccount = await userCollection.findOne({email:requested})
+      const requestedAccount = await makeAdminCollection.findOne({email:requested})
      
       if(requestedAccount.role==="admin"){
         next()
@@ -52,6 +56,11 @@ async function run(){
       const tools = await cursor.toArray()
       res.send(tools)
     })
+    app.post('/tools', async(req,res)=>{
+      const tool = req.body 
+      const result = await toolCollection.insertOne(tool)
+      res.send(result)
+    })
     app.get('/tools/:id', async(req,res)=>{
       const id = req.params.id
       const qurey = {_id: ObjectId(id)}
@@ -65,14 +74,47 @@ async function run(){
     res.send(result)
 
 }) 
+app.post('/create-payment-intent',verifyJwt , async(req,res)=>{
+  const order = req.body
+  console.log('order', order);
+  const price = order.price
+  console.log( 'price', price);
+  if(price){
+    const amount = parseFloat(price)*100
+  const paymentIntent = await stripe.paymentIntents.create({
+  amount : amount,
+  currency: "usd",
+  payment_method_types:['card']
+  
+  })
+  res.send({clientSecret: paymentIntent.client_secret})
+  }
+
+})
+
+app.put('/user/:email', async (req, res) => {
+  const email = req.params.email
+ 
+  const user = req.body
+  const filter = { email: email }
+  const options = { upsert: true };
+  const updateDoc = {
+    $set: user
+  };
+  const result = await makeAdminCollection.updateOne(filter, updateDoc, options)
+  const token = jwt.sign({email: email}, process.env.ACCESS_TOKEN,{ expiresIn: '1d' })
+  console.log(process.env.ACCESS_TOKEN);
+  res.send({result, token})
+
+})
   app.get('/user', async(req,res)=>{
     const users = await makeAdminCollection.find().toArray()
     res.send(users)
   })
+  
   app.get('/admin/:email', async (req, res) => {
     const email = req.params.email;
     const user = await makeAdminCollection.findOne({ email: email });
-    console.log(user.role);
     const isAdmin = user.role === 'admin';
     
     res.send({ admin: isAdmin })
@@ -86,31 +128,42 @@ async function run(){
     const result = await makeAdminCollection.updateOne(filter, updateDoc);
     res.send(result);
   })
-  app.put('/user/:email',verifyJwt, async (req, res) => {
-    const email = req.params.email
-    const user = req.body
-    const filter = { email: email }
-    const options = { upsert: true };
-    const updateDoc = {
-      $set: user
-    };
-    const result = await makeAdminCollection.updateOne(filter, updateDoc, options)
-    const token = jwt.sign({email: email}, process.env.ACCESS_TOKEN,{ expiresIn: '20d' })
-    res.send({result, token})
-
-  })
-   app.get('/order',verifyJwt, async(req,res)=>{
-     const email =  req.query.email
+  
+ 
+   app.get('/myorder',verifyJwt, async(req,res)=>{
+     const BuyerEmail =  req.query.email
+     console.log('buyer email',BuyerEmail);
      const decodedEmail = req.decoded.email
-    if(email ===decodedEmail)
-    { const qurey = {BuyerEmail  : email}
+     console.log('decoded', decodedEmail);
+    if(BuyerEmail ===decodedEmail)
+    { const qurey = {BuyerEmail  : BuyerEmail}
      const order = await ordersCollection.find(qurey).toArray()
      res.send(order)}
 
    })
-   app.get('/order', verifyJwt, async(req,res)=>{
-     const allOrder = await ordersCollection.find().toArray()
-     res.send(allOrder)
+   app.get('/order', async(req,res)=>{
+    const allOrder = await ordersCollection.find().toArray()
+    res.send(allOrder)
+  })
+   app.get('/order/:id', async(req,res)=>{
+     const id =req.params.id 
+     const qurey ={_id:ObjectId(id)}
+     const  result= await ordersCollection.findOne(qurey)
+     res.send(result)
+   })
+   app.patch('/order/:id',  async(req, res) =>{
+    const id  = req.params.id;
+    const payment = req.body;
+    const filter = {_id: ObjectId(id)};
+    const updatedDoc = {
+      $set: {
+        paid: true,
+        transactionId: payment.transactionId
+      }
+    } 
+    const result = await paymentCollection.insertOne(payment);
+    const updatedorder = await  ordersCollection.updateOne(filter, updatedDoc);
+    res.send(updatedorder);
    })
    app.post('/order', async(req,res)=>{
      const order= req.body
@@ -123,7 +176,11 @@ async function run(){
     const result = await ordersCollection.deleteOne(query)
     res.send(result) 
  })
- app.post('/review', async(req,res)=>{
+  app.get('/customerReview',async(req,res)=>{
+    const reviews = await reviewCollection.find().toArray()
+    res.send(reviews)
+  })
+  app.post('/review', async(req,res)=>{
   const review= req.body
   const result = await reviewCollection.insertOne(review)
   res.send(result)
