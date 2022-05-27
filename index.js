@@ -38,6 +38,7 @@ async function run(){
     const makeAdminCollection = client.db('ToolManagement').collection('makeAdmins');
     const reviewCollection = client.db('ToolManagement').collection('reviews');
     const paymentCollection = client.db('ToolManagement').collection('payments');
+    const profileCollection = client.db('ToolManagement').collection('profiles');
 
     const verifyAdmin =async (req,res,next)=>{
       const requested = req.decoded.email
@@ -185,7 +186,23 @@ app.put('/user/:email', async (req, res) => {
   const result = await reviewCollection.insertOne(review)
   res.send(result)
 }) 
-
+  
+  app.put('/profile/:email', async(req,res)=>{
+    const email = req.params.email 
+    const updateUser = req.body 
+    const filter = { email : email}
+    const options = { upsert: true };
+    const updatedDoc ={
+      $set:{
+        name: updateUser.name,
+        email: updateUser.email,
+        phone: updateUser.phone,
+        address: updateUser.address
+      }
+    }
+    const result = await profileCollection.updateOne(filter, updatedDoc, options)
+    res.send(result)
+  })
 
   }
   finally{
