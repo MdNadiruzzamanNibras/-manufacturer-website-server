@@ -51,7 +51,7 @@ async function run(){
         res.status(403).send({ message: 'forbidden' });
       }
     }
-    app.get('/tools',verifyJwt, async(req,res)=>{
+    app.get('/tools', async(req,res)=>{
       const qurey = {}
       const cursor =  toolCollection.find(qurey)
       const tools = await cursor.toArray()
