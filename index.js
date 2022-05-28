@@ -150,7 +150,7 @@ app.put('/user/:email', async (req, res) => {
      const  result= await ordersCollection.findOne(qurey)
      res.send(result)
    })
-   app.patch('/order/:id',  async(req, res) =>{
+   app.put('/order/:id',  async(req, res) =>{
     const id  = req.params.id;
     const payment = req.body;
     const filter = {_id: ObjectId(id)};
