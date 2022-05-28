@@ -51,7 +51,7 @@ async function run(){
         res.status(403).send({ message: 'forbidden' });
       }
     }
-    app.get('/tools', async(req,res)=>{
+    app.get('/tools',verifyJwt, async(req,res)=>{
       const qurey = {}
       const cursor =  toolCollection.find(qurey)
       const tools = await cursor.toArray()
@@ -108,7 +108,7 @@ app.put('/user/:email', async (req, res) => {
   res.send({result, token})
 
 })
-  app.get('/user', async(req,res)=>{
+  app.get('/user',verifyJwt, async(req,res)=>{
     const users = await makeAdminCollection.find().toArray()
     res.send(users)
   })
@@ -140,7 +140,7 @@ app.put('/user/:email', async (req, res) => {
      res.send(order)}
 
    })
-   app.get('/order', async(req,res)=>{
+   app.get('/order',verifyJwt, async(req,res)=>{
     const allOrder = await ordersCollection.find().toArray()
     res.send(allOrder)
   })
