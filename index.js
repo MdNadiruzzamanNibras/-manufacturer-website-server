@@ -1,6 +1,6 @@
 const express = require('express');
-const cors = require('cors');
 require('dotenv').config()
+const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express()
 const stripe = require('stripe')(process.env.Stripe_key)
@@ -113,7 +113,7 @@ app.put('/user/:email', async (req, res) => {
     res.send(users)
   })
   
-  app.get('/admin/:email', async (req, res) => {
+  app.get('/admin/:email',verifyJwt, async (req, res) => {
     const email = req.params.email;
     const user = await makeAdminCollection.findOne({ email: email });
     const isAdmin = user.role === 'admin';
@@ -133,9 +133,7 @@ app.put('/user/:email', async (req, res) => {
  
    app.get('/myorder',verifyJwt, async(req,res)=>{
      const BuyerEmail =  req.query.email
-     console.log('buyer email',BuyerEmail);
      const decodedEmail = req.decoded.email
-     console.log('decoded', decodedEmail);
     if(BuyerEmail ===decodedEmail)
     { const qurey = {BuyerEmail  : BuyerEmail}
      const order = await ordersCollection.find(qurey).toArray()
@@ -172,6 +170,12 @@ app.put('/user/:email', async (req, res) => {
      res.send(result)
    })
    app.delete('/order/:id', async(req,res)=>{
+    const id = req.params.id
+    const query = {_id: ObjectId(id)}
+    const result = await ordersCollection.deleteOne(query)
+    res.send(result) 
+ })
+   app.delete('/allorder/:id', async(req,res)=>{
     const id = req.params.id
     const query = {_id: ObjectId(id)}
     const result = await ordersCollection.deleteOne(query)
