@@ -32,7 +32,7 @@ const uri = `mongodb+srv://${process.env.DB_USSER}:${process.env.DB_PASS}@cluste
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 async function run(){
   try{
-    await client.connect();
+     client.connect();
     const toolCollection = client.db('ToolManagement').collection('tools');
     const ordersCollection = client.db('ToolManagement').collection('orders');
     const makeAdminCollection = client.db('ToolManagement').collection('makeAdmins');
